@@ -41,6 +41,10 @@ getAvailModels <- function() {
 # function that takes a text and return JSON prediction : parameters should be checked for errors before calling this fun
 ocpuPredict <- function (texte, service, nbCodes) {
   
+  # Load 'Libelles' for code labels
+  utils::data( list=c("Libelles"), package = "mlcodage" );
+  
+  # Load prediction model
   utils::data( list=paste(service, ".model", sep=""), package = "mlcodage" );
   
   ### Transform free text
@@ -57,9 +61,10 @@ ocpuPredict <- function (texte, service, nbCodes) {
   ordIndices <- order(res, decreasing=TRUE);
   code <- colnames(res)[ ordIndices[1: nbCodes] ] ;
   prob <- res[ ordIndices[1: nbCodes] ];
+  labels <- as.character(Libelles[code,1])
   
   # Build and return json
-  json <- jsonlite::toJSON(data.frame(code=code, prob=round(prob, 4) ), pretty=TRUE);
+  json <- jsonlite::toJSON(data.frame(code=code, label=labels, prob=round(prob, 4) ), pretty=TRUE);
   return(json);
 }
 
