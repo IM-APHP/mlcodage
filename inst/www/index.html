@@ -44,7 +44,9 @@
 		  service : s,
 		  nbCodes : n
         }, function(output){
-          $("#output").text(output);
+          $("#output").text("");
+		  ou = document.getElementById('output');
+		  ou.innerHTML = ou.innerHTML + output;
         });
         
         //if R returns an error, alert the error message

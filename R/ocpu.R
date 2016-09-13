@@ -65,6 +65,9 @@ ocpuPredict <- function (texte, service, nbCodes) {
   
   # Build and return json
   json <- jsonlite::toJSON(data.frame(code=code, label=labels, prob=round(prob, 4) ), pretty=TRUE);
+  json <- stringr::str_replace_all(json, "\\{", "<br/>{<br/>");
+  json <- stringr::str_replace_all(json, "\\}", "<br/>}<br/>");
+  
   return(json);
 }
 
