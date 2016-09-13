@@ -1,0 +1,10 @@
+Package: mlcodage
+Type: Package
+Title: OpenCPU-based mlcodage package
+Version: 1.0
+Date: 2016-08-05
+Author: Rémi Flicoteaux
+Maintainer: Rémi <remi.flicoteaux@aphp.fr>
+Description: This package is used for automatic code assignment to medical summaries based on machine learning.
+License: Apache2
+LazyData: false

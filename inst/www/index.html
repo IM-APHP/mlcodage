@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Aide au codage CCAM</title>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf8" />
+	
+    <!-- Include order: first jquery, then opencpu.js, and then your code -->
+    <script src="opencpu/jquery-1.10.2.min.js"></script>
+    <script src="opencpu/opencpu-0.4.js"></script>
+    <script>
+    //init this script when the page has loaded
+    $(document).ready(function(){
+	
+	
+	    //Load all available models into the select box
+        var req = ocpu.rpc("getAvailModels", {
+        }, function(output){
+		  sel = document.getElementById('services');
+		  $.each( output, function( index, value ){
+			var opt = document.createElement('option');
+			opt.value = value;
+			opt.innerHTML = value;
+			sel.appendChild(opt);
+		  });
+        });
+		
+		
+	  // Sumbit button click action
+      $("#submitbutton").on("click", function(){
+        //disable the button to prevent multiple clicks
+        $("#submitbutton").attr("disabled", "disabled");
+        
+        //read the values
+        var t = $("#textfield").val();
+        var s = $("#services").val();
+        var n = $("#numberfield").val();
+        
+		
+		$("#output").text("Traitement..");
+		
+        //perform the request
+        var req = ocpu.rpc("ccamCode", {
+          texte : t,
+		  service : s,
+		  nbCodes : n
+        }, function(output){
+          $("#output").text(output);
+        });
+        
+        //if R returns an error, alert the error message
+        req.fail(function(){
+          alert("Server error: " + req.responseText);
+        });
+        
+        //after request complete, re-enable the button 
+        req.always(function(){
+          $("#submitbutton").removeAttr("disabled")
+        });
+      });
+	  
+	  
+	  
+	  // -- Another button
+	  $("#button2").on("click", function(){
+        //disable the button to prevent multiple clicks
+        $("#button2").attr("disabled", "disabled");
+                
+        //if R returns an error, alert the error message
+        req.fail(function(){
+          alert("Server error: " + req.responseText);
+        });
+        
+        //after request complete, re-enable the button 
+        req.always(function(){
+          $("#submitbutton").removeAttr("disabled")
+        });
+      });	  
+	  // --
+	  
+	  
+	  
+	  
+    });
+    </script>
+    
+    <style>
+	
+      #output{
+        height: 170px;
+        width: 100%;
+        border: 1px solid gray;
+        padding: 3px;
+		overflow-y: scroll;
+      }
+	  
+	  #textfield{
+        height: 80px;
+        width: 100%;
+        border: 1px solid gray;
+        padding: 3px;
+      }
+	  
+	  #services{
+        width: 101%;
+        border: 1px solid gray;
+        padding: 3px;
+      }
+	  
+	  #numberfield{
+        height: 16px;
+        width: 100%;
+        border: 1px solid gray;
+        padding: 3px;
+      }
+	  
+	  h1
+	  {
+		color: #3385ff;
+ 	  }
+	  
+	  body
+	  {
+		width:100%;
+		margin-left:auto;
+		margin-right:auto;
+		font-family:"verdana";
+		overflow-x: hidden;
+
+	  }
+	  
+	  #mytab
+	  {
+		width:60%;
+		margin-left:auto;
+		margin-right:auto;
+		font-family:"verdana";
+		padding-right: 3px;
+	  }
+
+    </style>
+    
+  </head>
+    
+  <body>
+  <img src="bg-pan1.jpg" height="130px"></img>
+  
+  <table style="width: 100%;">
+  <tr bgcolor="#66CCFF"><td><br/></td>
+  </tr></table>
+  <h1 align="center">Interface d'aide au codage CCAM</h1>
+    
+	
+  <table id="mytab">
+  <tr>
+    <td><b>Texte   :</b></td>
+    <td><textarea id="textfield" name="Text1" cols="40" rows="5"></textarea> <br/> <br/></td>
+  </tr>
+  <tr>
+    <td><b>Service :</b></td>
+    <td><br/><select name="services" id="services">	</select><br/><br/></td>
+  </tr>
+  <tr>
+    <td><b>Nombre de codes :</b></td>
+    <td><br/><input type="text" id="numberfield" value="5"> <br/> <br/></td>
+  </tr>
+  <tr>
+    <td><b></b></td>
+    <td width=70%; align="right"><button id="submitbutton" type="button"> <big><b> >>  Codes  >> </b></big> </button> <br/></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td><br/><br/></td>
+  </tr>
+  <tr>
+    <td><b>R&eacute;sultat :</b></td>
+    <td><p id="output"></p><br/></td>
+  </tr>
+  </table>
+  
+  <table style="width: 100%;">
+  <tr align="center" bgcolor="#66CCFF"><td>
+  | <a href="#">A propos</a>
+  | <a href="#">Le projet sur GitHub</a>
+  | <a href="mailto:remi.flicoteaux@aphp.fr">Contact</a>
+  | <a href="#">Aide</a>
+  | 
+  </td>
+  </tr></table>
+	
+  <table style="width: 100%;">
+  <tr align="right"><td>
+  <img src="inserm.jpg" height="40px"></img>
+  <img src="sbim.png" height="40px"></img>
+  <img src="univ.jpg" height="40px"></img>
+  </td>
+  </tr></table>
+	
+    <p>
+    </p>    
+  </body>
+</html>
