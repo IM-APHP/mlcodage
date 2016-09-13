@@ -50,6 +50,11 @@ ocpuPredict <- function (texte, service, nbCodes) {
   ### Transform free text
   mtrx <- transform.matrix( tm::DocumentTermMatrix(tm::Corpus(tm::VectorSource(texte)), control=model$dtmParams) , "me");
   
+  # check if text is not empty (empty = after parse, no "1" in the matrix)
+  if ( rowSums(mtrx) == 0) {
+    return ("Error: void (or too short) text !");
+  }
+  
   # Predict and return raw probabilities
   result <- stats::predict (model, mtrx, probability=TRUE);
   res <- attr (result, "probabilities");
@@ -84,7 +89,7 @@ ccamCode <- function(texte="", service="", nbCodes=10) {
   modelNames <- getAvailModels();
   
   if( (texte == "") || (! service %in% modelNames) || (as.numeric(nbCodes) %% 1 != 0) ) {
-    return ("Error: data format error !");
+    return ("Error: incorrect data format !");
   }
   else {
     return ( ocpuPredict(texte, service, as.numeric(nbCodes)) );
