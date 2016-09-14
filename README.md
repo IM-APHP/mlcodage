@@ -14,6 +14,7 @@ To run the app in your local R session:
 then, to start coding, go to url: %ip-address%:%port%/ocpu/library/mlcodage/www/index.html
 
 Author(s)
-ERIC Lab University Lyon 1 & 2
-ECSTRA Team INSERM 1153
+
+ERIC Lab University Lyon 1 & 2, 
+ECSTRA Team INSERM 1153, 
 Departement of medical informatics AP-HP
