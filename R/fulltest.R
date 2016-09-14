@@ -159,7 +159,7 @@ buildFromCsv <- function (csv, diags, modelType="SVM", multiLabMod="!d", minCodS
 #' @param jsFolder path to your local folder containing JSON files.
 #' @param diagsPath path to your local RData file containing diagnostics (codes). The file must contain an object called "Diagnostics" with at least two columns ('NDA', and 'ACTE').
 #' @param corpusName choose a name for your corpus.
-#' @param serviceName choose a service name one from the built-in services:{'urologie', 'chirgen', 'chirplas', 'chirmaxfac'}.
+#' @param serviceName choose a service name from the built-in services: \{'urologie', 'chirgen', 'chirplas', 'chirmaxfac'\}.
 #' This argument is used to choose the right UH (Hospital Unit) as well as the right variables from the JSON.
 #' If you don't want any restriction regarding UH and VAR, please set serviceName to 'gen'.
 #' @return a list of two dataframes: 'csv' and 'diags' to be given separately to function 'buildFromCsv'.
