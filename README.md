@@ -3,7 +3,7 @@ OpenCPU-based coding app: mlcodage
   
 The purpose of this OpenCPU app is to help automating the task of code assignment to discharge summaries using machine learning.  
 
-Use locally:
+Use locally :
 -----------
 
 To run the app in your local R session:
