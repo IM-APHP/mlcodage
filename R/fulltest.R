@@ -1,10 +1,20 @@
 
-#' buildFromCsv function
+#' Build Predictive Models from CSV
 #' 
-#' build a new model from CSV data
+#' Build a new code prediction model from CSV data. The function takes two mandatory 2-column dataframes: 'csv' and 'diags'. See below for details.
 #' 
 #' @export
-#' @param data a data frame with 2 columns: 'text' (free text) and 'code' (alpha-num code), lines must have uniq names
+#' @param csv a data frame with 2 columns: 'NDA' (a unique line identifier), and 'TEXT (free text).
+#' @param diags a data frame with 2 columns: 'NDA' (a unique line identifier), and 'DIAG' (alpha-num codes).
+#' @param modelType model type from \{"SVM", "NB"\} for Support Vector Machine, and Naive Bayes respectively.
+#' @param multiLabMod a string argument to specify how to deal with multilabeled texts. Put "d" if you want to duplicate them (the same text is considered multiple times with one code at each), or any other value to ignore multilabeled texts.
+#' @param minCodSiz minimum code size to be reached (numeric). If this argument is set to K, then the codes with less than K texts will be bootstrapped to reach this minimum.
+#' @return an object of type "svm" or "nb" (depends on the specified 'modelType' argument.).
+#' If you want to use the built model within 'mlcodage' Web service, you must add it to the 'data' folder of the package in the form of an RData object with extension ".model.RData', then re-compile the package.
+#' @examples
+#' csv = data.frame(NDA=c("T1", "T2"), TEXT=c("text numer one", "text number two"))
+#' diags = data.frame(NDA=c("T1", "T2"), DIAG=c("CODE1", "CODE2"))
+#' buildFromCsv(csv, diags, modelType="SVM", multiLabMod="!d", minCodSiz=0)
 buildFromCsv <- function (csv, diags, modelType="SVM", multiLabMod="!d", minCodSiz=0) {
   # Chek data format
   if (colnames(csv)[1] != "NDA" | colnames(csv)[2] != "TEXT") {
@@ -140,14 +150,19 @@ buildFromCsv <- function (csv, diags, modelType="SVM", multiLabMod="!d", minCodS
   return(model);
 }
 
-#' csvFromJSONs function
+#' Generate CSV objects from a set of JSON Files
 #' 
-#' generate CSV and Diags from a floder of JSON files (or MIMIC database)
+#' Generate 'csv' and 'diags' objects starting from a floder with a plenty of JSON files.
+#' These objects can then be given to function 'buildFromCsv' in order to build a predictive model.
 #' 
 #' @export
-#' @param jsFolder path to the folder containing JSON files
-#' @param corpusName give a name to your corpus
-#' @param serviceName : choose one from 'urologie', 'chirgen'... (see list below) or put 'gen' for no UH-and-VAR restrictions
+#' @param jsFolder path to your local folder containing JSON files.
+#' @param diagsPath path to your local RData file containing diagnostics (codes). The file must contain an object called "Diagnostics" with at least two columns ('NDA', and 'ACTE').
+#' @param corpusName choose a name for your corpus.
+#' @param serviceName choose a service name one from the built-in services:{'urologie', 'chirgen', 'chirplas', 'chirmaxfac'}.
+#' This argument is used to choose the right UH (Hospital Unit) as well as the right variables from the JSON.
+#' If you don't want any restriction regarding UH and VAR, please set serviceName to 'gen'.
+#' @return a list of two dataframes: 'csv' and 'diags' to be given separately to function 'buildFromCsv'.
 csvFromJSONs <- function (jsFolder, diagsPath, corpusName, serviceName) {
   # MiddleCare variables (different from a service to another)
   fields = list();
@@ -203,6 +218,7 @@ csvFromJSONs <- function (jsFolder, diagsPath, corpusName, serviceName) {
   return (list(csv=csv, diags=diags));
 }
 
+# Return the default parsing parameters.
 getDefaultDtmParams <- function() {
   
   stopWordPath <- paste(getwd(), "/data/sw200.txt", sep=""); # stop word file list (one word /line)

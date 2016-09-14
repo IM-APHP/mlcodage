@@ -1,10 +1,15 @@
 
-#' launchListener function
+#' Launcher Web Service Listener
 #' 
-#' CCAM Code Prediction daemon launcher through OpenCPU
+#' Launch the Web service daemon at the specified port. If the daemon is already listening, it will be stopped and replaced by the new one.
+#' Please check that the message "Web interface at: \%url\%" is displayed to ensure everything went ok.
+#' The coding Web interface is available at the displayed \%url\% address that you can access via navigator.
 #' 
 #' @export
-#' @param port listening port (default 5626). Required.
+#' @param port listening port (default 80).
+#' @return FALSE if everything went ok.
+#' @examples
+#' launchListener(port=8020) # must return FALSE
 launchListener <- function (port=80) {
 
   library(opencpu, quietly=TRUE);
@@ -12,15 +17,20 @@ launchListener <- function (port=80) {
   opencpu$stop();
   opencpu$start(port);
   message("OpenCPU : ", opencpu$checkstatus());
-  message("Listening on : ", opencpu$url());
+  message("Listening..\nWeb interface at: ", opencpu$url(), "/library/mlcodage/www/index.html");
+  return (FALSE);
 }
 
 
-#' getAvailModels function
+#' Get Available Models
 #' 
-#' Return the list of all available models that can be used for prediction
+#' Returns the list of all available models that can be used for code prediction. The models are stored as 'RData' files within the 'data' folder of the package.
+#' If you want to use custom models, please add them manually to the 'data' folder (with extension '.model.RData') then re-build the package.
 #' 
 #' @export
+#' @return character vector with the names of available models.
+#' @examples
+#' getAvailModels() # returns c("Chirurgie-generale", "Chirurgie-maxillo-faciale", "Chirurgie-plastique-Pr-Revol", "Urologie")
 getAvailModels <- function() {
   dat <- as.data.frame(data(package = "mlcodage")$results);
   dat <- dat[ grepl("model", dat$Item), "Item"];
@@ -37,7 +47,6 @@ getAvailModels <- function() {
 #' 
 #' Predicts the probables codes for a text within a service
 #' 
-#' @export
 # function that takes a text and return JSON prediction : parameters should be checked for errors before calling this fun
 ocpuPredict <- function (texte, service, nbCodes) {
   
@@ -76,20 +85,25 @@ ocpuPredict <- function (texte, service, nbCodes) {
   return(json);
 }
 
-#' ccamCode function
+#' CCAM Code Prediction
 #' 
-#' CCAM Code Prediction interface (to be called from mlcodage:: package)
+#' CCAM code prediction function. It is used by OpenCPU Web service for Web-based prediction and can be used directly from R console.
 #' 
 #' @export
-#' @param text discharge summary. Required.
-#' @param service the service from urology, surgery, ... etc, used to pick the right model. Required.
-#' @param nbCodes number of returned codes (default 10). Required.
+#' @param text medical text to be encoded.
+#' @param service service name, from the list of built-in models : \{'urologie', 'chirgen', 'chirplas', 'chirmaxfac'\}. 
+#' This parameter is used to pick the right model for code prediction.
+#' @param nbCodes the desired number of returned codes (default 10).
+#' @return string with JSON data with the ordered list of predicted codes. Each is assigned with code label and probability.
+#' If an error occurs, the function returns a string with error description.
+#' @examples
+#' ccamCode("Résection de tumeurs de la vessie, par endoscopie", "urologie", 5) # returns a JSON string with predicted codes and probabilities.
 ccamCode <- function(texte="", service="", nbCodes=10) {
   
   modelNames <- getAvailModels();
   
   if( (texte == "") || (! service %in% modelNames) || (as.numeric(nbCodes) %% 1 != 0) ) {
-    return ("Error: incorrect data format !");
+    return ("Error: incorrect data format ! (possible causes: void text, service is not available, number of codes is not numeric)");
   }
   else {
     return ( ocpuPredict(texte, service, as.numeric(nbCodes)) );
