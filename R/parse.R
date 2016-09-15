@@ -1,3 +1,5 @@
+## text preprocessing and example of text load from json
+
 
 # duplicate multi-label documents for learning, return a sparse 'Matrix'
 duplicMultiLabel <- function (dtMat, goldStrd, statsPerDoc) {
@@ -192,7 +194,7 @@ writeSvmLight <- function (matrix, labels, outPath) {
 }
 
 # Load data from a folder (all JSON files)
-loadJsonFolder <- function (jsFolder, fields, docType, minContentLen) {
+loadJsonFolder <- function (jsFolder, fields=NULL, docType=NULL, minContentLen=0) {
   csv <- data.frame(matrix(ncol=2));
   names(csv) <- c("NDA", "TEXT");
   for (fileName in list.files(jsFolder, pattern="\\.json$")) {
@@ -211,9 +213,9 @@ loadJsonFolder <- function (jsFolder, fields, docType, minContentLen) {
 }
 
 # Load data from  asingle JSON file
-loadJsonFile <- function (path, fields, docType, minContentLen) {
+loadJsonFile <- function (path, fields=NULL, docType=NULL, minContentLen=0, idPath=c('NDA','valeur')) {
   jsonData <- jsonlite::fromJSON(path);
-  nda <- eval ( parse(text=paste("jsonData$NDA$valeur", "\n", sep="")));
+  nda <- eval ( parse(text=paste("jsonData$",paste(idPath,collapse='$'), "\n", sep="")));
   # Keep only 9 first digits from NDA
   nda = substr(nda, 1, 9);
   
@@ -223,17 +225,19 @@ loadJsonFile <- function (path, fields, docType, minContentLen) {
       return (NULL);
   
   relevantFields <- fields;
-  if (is.null(fields))
-    relevantFields <- names(jsonData);
-  dat <- "";
-  for (varName in relevantFields) {
-    #etiq <- eval ( parse(text=paste("jsonData$", varName, "$etiquette", "\n", sep="")));
-    #dat <- paste (dat, etiq, sep="\n\n");
-    val <- eval ( parse(text=paste("jsonData$", varName, "$valeur", "\n", sep="")));
-    dat <- paste (dat, gsub("<.*?>", "", val), sep="; ");
-    dat <- gsub("^\\s+|\\s+$", "", dat); # Suppr. les espaces au début et à la fin
-    dat <- gsub("\n+|\r+", " ", dat); # Suppr. les sauts de lignes (entre autres pour un stockage CSV efficace)
+  if (is.null(fields)) {
+    dat <-paste(unlist(jsonData),collapse=' ');
   }
+  else {
+    for (varName in relevantFields) {
+      #etiq <- eval ( parse(text=paste("jsonData$", varName, "$etiquette", "\n", sep="")));
+      #dat <- paste (dat, etiq, sep="\n\n");
+      dat <- eval ( parse(text=paste("jsonData$", varName, "$valeur", "\n", sep="")));
+      }
+  }
+  dat <- paste (dat, gsub("<.*?>", "", dat), sep="; ");
+  dat <- gsub("^\\s+|\\s+$", "", dat); # Suppr. les espaces au début et à la fin
+  dat <- gsub("\n+|\r+", " ", dat); # Suppr. les sauts de lignes (entre autres pour un stockage CSV efficace)
   if ( nchar(dat) >= minContentLen)
       return (c(nda, dat))
     else
@@ -241,12 +245,12 @@ loadJsonFile <- function (path, fields, docType, minContentLen) {
 }
 
 # Build gold-standard matrix
-buildGoldStrd <- function (csv, diags, allowedCodes) {
-  goldStrd <- as.data.frame(matrix(FALSE, ncol=length(allowedCodes), nrow=length(csv$NDA)) );
+buildGoldStrd <- function (df.text, df.code, allowedCodes) {
+  goldStrd <- as.data.frame(matrix(FALSE, ncol=length(allowedCodes), nrow=length(df.text[,1])) );
   names(goldStrd) <- allowedCodes;
-  rownames(goldStrd) <- csv[,"NDA"];
-  for (nda in csv$NDA) {
-    codes <- as.vector( (unique(as.matrix(diags[diags$NDA==nda, , ]["DIAG"]))) );
+  rownames(goldStrd) <- df.text[, 1];
+  for (nda in df.text[,1]) {
+    codes <- as.vector( (unique(as.matrix(df.code[df.code[,1]==nda, , ][2]))) );
     goldStrd[nda, codes] <- TRUE;
   }
   return (goldStrd);
