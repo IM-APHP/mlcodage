@@ -5,5 +5,5 @@ export(ccamCode)
 export(csvFromJSONs)
 export(getAvailModels)
 export(launchListener)
-import(e1071,Matrix,tm)
+import(e1071,Matrix,tm,SparseM,SnowballC)
 
