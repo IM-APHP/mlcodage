@@ -1,60 +1,29 @@
-## build and deploy machine learning models for code prediction
-
-#' loadPkgs function
-#' 
-#' Install and/or load all the required packages for mlcodage
-#' 
-loadPkgs <- function() {
-  # install required packages (if not installed)
-  requiredPkg <- c("tm","opencpu","e1071", "ROCR", "rpart", "tree", "maxent", "gplots", "PerfMeas", "jsonlite", "gdata", "mldr", "gmum.r", "matrixStats", "SnowballC", "R.utils", "arules", "FSelector", "ggplot2", "RWeka", "stringr", "RPostgreSQL");
-  #requiredPkg <- c();# c("tm","opencpu","e1071", "jsonlite", "R.utils");
-  
-  #   pkgToInstall <- setdiff(requiredPkg, rownames(installed.packages()));
-  #   for (package in pkgToInstall) {
-  #     if (!require(package, character.only=TRUE)) {
-  #       message ("Installing package ", package);
-  #       install.packages(package);
-  #       library(package, character.only=T);
-  #     }
-  #   }
-  
-  message ("Loading required libraries..");
-  for (p in requiredPkg)
-    suppressWarnings(suppressMessages(library(p, character.only=TRUE, quietly=TRUE)));
-}
-
-# Function : Build Association-rule prediction model based on APriori
-buildRules <- function (dataMatrix, minSupp, minConf, gdStrd) {
-  gdStrd <- apply(gdStrd, 2, as.numeric); # Convert logical to numeric
-  mat <- t(t(cbind (dataMatrix, gdStrd)));
-  trans <- as(mat, "transactions");
-  rules <- apriori(trans, appearance = list(default="lhs",rhs=allLabels), parameter=list(supp=minSupp, conf=minConf, target="rules", minlen=2, maxlen=5));
-  return (rules);
-}
+##############################################################################################
+############## Follows: text parsing/preprocessing functions #################################
+##############################################################################################
 
 # Function : Build model
 buildModel <- function (modelType, dataMatrix, labels, buildParams) {
   model = NULL;
   switch(tolower(modelType),
-         "svm"={
-           model <- e1071::svm(x=dataMatrix, y=labels, kernel="linear", probability=TRUE, type="C-classification", scale=TRUE, tolerance=0.1, fitted=FALSE);
-           #model <- gmum.r::SVM(as.matrix(dataMatrix), as.vector(labels), class.type="one.versus.one", core="libsvm", kernel=params$kernel, C=1);
-         },
-         "nb"={
-           model <- naiveBayes(x = dataMatrix, y=labels, buildParams, laplace=0.01);
-         },
-         "me"={
-           model <- maxent(dataMatrix, labels);
-         },
-         "dt"={
-           model <- rpart(labels ~ ., data=as.data.frame(dataMatrix), method="class", parms=list(split="information"), control=rpart.control(minsplit=4, cp=0.01)  );
-         },
-         # default
-{
-  message ("Model type not recognized !");
-}
-  );
-return (model);
+    "svm"={
+      model <- e1071::svm(x=dataMatrix, y=labels, kernel="linear", probability=TRUE, type="C-classification", scale=TRUE, tolerance=0.1, fitted=FALSE);
+      #model <- gmum.r::SVM(as.matrix(dataMatrix), as.vector(labels), class.type="one.versus.one", core="libsvm", kernel=params$kernel, C=1);
+    },
+    "nb"={
+      model <- naiveBayes(x = dataMatrix, y=labels, buildParams, laplace=0.01);
+    },
+    "me"={
+      model <- maxent(dataMatrix, labels);
+    },
+    "dt"={
+      model <- rpart(labels ~ ., data=as.data.frame(dataMatrix), method="class", parms=list(split="information"), control=rpart.control(minsplit=4, cp=0.01)  );
+    },
+    # default
+    {
+      message ("Model type not recognized !");
+    });
+  return (model);
 }
 
 # Deploy a ML model (#if thresH < 1 return all classes with thres>thresH, else return exactly thresH classes)
@@ -62,22 +31,21 @@ deployModel <- function (modelType, model, dataMatrix, thresH, allPresLabels) {
   res <- NULL;
   switch(tolower(modelType),
     "svm"= {
-     res <- deploySvm (model, dataMatrix, thresH, allPresLabels);
+      res <- deploySvm (model, dataMatrix, thresH, allPresLabels);
     },
     "nb"= {
-     res <- deployNb (model, dataMatrix, thresH);
+      res <- deployNb (model, dataMatrix, thresH);
     },
     "me"= {
-     res <- deployME (model, dataMatrix, thresH);
+      res <- deployME (model, dataMatrix, thresH);
     },
     "dt"= {
-     res <- deployDT (model, as.data.frame(dataMatrix), thresH);
+      res <- deployDT (model, as.data.frame(dataMatrix), thresH);
     },
     # default
     {
       message ("Model type not recognized !");
-    }
-  );
+    });
   return (res);
 }
 
@@ -175,22 +143,22 @@ deployDT <- function (model, dataMatrix, thresH) {
 }
 
 
-#' Build Predictive Models from CSV
+#' Build Predictive Models from DataFrames
 #' 
-#' Build a new code prediction model from CSV data. The function takes two mandatory 2-column dataframes: 'csv' and 'diags'. See below for details.
+#' Build a new code prediction model from data stored in dataframes. The function takes two mandatory 2-column dataframes: 'df.text' and 'df.code'. See below for details.
 #' 
 #' @export
-#' @param csv a data frame with 2 columns: 'ID' (a unique line identifier), and 'TEXT (free text).
-#' @param diags a data frame with 2 columns: 'ID' (a unique line identifier), and 'DIAG' (alpha-num codes).
+#' @param df.text a data frame with 2 columns: 'ID' (a unique line identifier), and 'TEXT (free text).
+#' @param df.code a data frame with 2 columns: 'ID' (a unique line identifier), and 'DIAG' (alpha-num codes).
 #' @param modelType model type from \{"SVM", "NB"\} for Support Vector Machine, and Naive Bayes respectively.
 #' @param multiLabMod a string argument to specify how to deal with multilabeled texts. Put "d" if you want to duplicate them (the same text is considered multiple times with one code at each), or any other value to ignore multilabeled texts.
 #' @param minCodSiz minimum code size to be reached (numeric). If this argument is set to K, then the codes with less than K texts will be bootstrapped to reach this minimum.
 #' @return an object of type "svm" or "nb" (depends on the specified 'modelType' argument.).
 #' If you want to use the built model within 'mlcodage' Web service, you must add it to the 'data' folder of the package in the form of an RData object with extension ".model.RData', then re-compile the package.
 #' @examples
-#' csv = data.frame(ID=c("T1", "T2"), TEXT=c("text numer one", "text number two"))
-#' diags = data.frame(ID=c("T1", "T2"), DIAG=c("CODE1", "CODE2"))
-#' buildFromCsv(csv, diags, modelType="SVM", multiLabMod="!d", minCodSiz=0)
+#' df.text = data.frame(ID=c("T1", "T2"), TEXT=c("text numer one", "text number two"))
+#' df.code = data.frame(ID=c("T1", "T2"), DIAG=c("CODE1", "CODE2"))
+#' buildFromCsv(df.text, df.code, modelType="SVM", multiLabMod="!d", minCodSiz=0)
 buildFromDF <- function (df.text, df.code, modelType="SVM", multiLabMod="!d", minCodSiz=0) {
   # Chek data format
   if ( length(unique(rownames(df.text))) != length(rownames(df.text)) || length(unique(rownames(df.code))) != length(rownames(df.code)) ) {
@@ -320,10 +288,10 @@ buildFromDF <- function (df.text, df.code, modelType="SVM", multiLabMod="!d", mi
   return(model);
 }
 
-#' Generate CSV objects from a set of JSON Files
+#' Generate dataframes from a set of JSON Files
 #' 
-#' Generate 'csv' and 'diags' objects starting from a floder with a plenty of JSON files.
-#' These objects can then be given to function 'buildFromCsv' in order to build a predictive model.
+#' Generate 'df.text' and 'df.code' objects starting from a floder with a plenty of JSON files.
+#' These objects can then be given to function 'buildFromDF' in order to build a predictive model.
 #' 
 #' @export
 #' @param jsFolder path to your local folder containing JSON files.
@@ -332,7 +300,7 @@ buildFromDF <- function (df.text, df.code, modelType="SVM", multiLabMod="!d", mi
 #' @param serviceName choose a service name from the built-in services: \{'urologie', 'chirgen', 'chirplas', 'chirmaxfac'\}.
 #' This argument is used to choose the right UH (Hospital Unit) as well as the right variables from the JSON.
 #' If you don't want any restriction regarding UH and VAR, please set serviceName to 'gen'.
-#' @return a list of two dataframes: 'csv' and 'diags' to be given separately to function 'buildFromCsv'.
+#' @return a list of two dataframes: 'texts' and 'codes' to be given separately to function 'buildFromDF'.
 csvFromJSONs <- function (jsFolder, diagsPath, corpusName, serviceName) {
   # MiddleCare variables (different from a service to another)
   fields = list();
@@ -386,29 +354,5 @@ csvFromJSONs <- function (jsFolder, diagsPath, corpusName, serviceName) {
     diags <- diags[diags$NDA %in% csv$NDA, , ];
   }
   names(csv) <- c('ID', 'TEXT');
-  return (list(csv=csv, diags=diags));
-}
-
-# Return the default parsing parameters.
-getDefaultDtmParams <- function() {
-  
-  stopWordPath <- paste(getwd(), "/data/sw200.txt", sep=""); # stop word file list (one word /line)
-  corpusLanguage <- "french";
-  
-  # return Global tokenizing params #########################
-  dtmParams <- list(
-    dictionary = NULL, # A character vector of terms wose will be listed in the result
-    bounds = list(local = c(1, Inf), global = c(1, Inf)), # Terms that appear less often in doc than the lower bound bounds$local[1] or more often than the upper bound bounds$local[2] are discarded
-    wordLengths = c(2, Inf), # Words shorter than the minimum word length wordLengths[1] or longer than the maximum word length wordLengths[2] are discarded
-    weighting = weightBin,
-    removePunctuation = rmvPunct,
-    removeNumbers = rmvNmbrUnAccent,
-    stemming = TRUE,
-    stopwords = stemDocument(as.character(read.csv(stopWordPath, stringsAsFactors=FALSE, encoding="UTF-8")[,1]), lang=corpusLanguage),
-    tolower = TRUE,
-    minTokenSize = 2,
-    maxTokenSize = 3,
-    tokenize = "words" # can be "MC", "scan", "words" or a custom function
-  );
-  return(dtmParams);
+  return (list(texts=csv, codes=diags));
 }

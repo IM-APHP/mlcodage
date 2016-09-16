@@ -1,5 +1,6 @@
-## text preprocessing and example of text load from json
-
+##############################################################################################
+############## Follows: text parsing/preprocessing functions #################################
+##############################################################################################
 
 # duplicate multi-label documents for learning, return a sparse 'Matrix'
 duplicMultiLabel <- function (dtMat, goldStrd, statsPerDoc) {
@@ -57,15 +58,13 @@ bootstrpRareLabel <- function (dtMat, goldStrdMat, truthVec, statsPerCode, minCo
   return (list(mat=dtMatBis, gsMat=gsMatBis, gsVec=truthVBis, statsBis=rareCodes));
 }
 
-# re-def
+# re-def: remove numbers and un-accentuate text
 rmvNmbrUnAccent <- function(x) {
-  
-  # !!!!!!! PROVISOIRE "DE-ACCENTUATE"
   x <- iconv(x, from="UTF-8", to='ASCII//TRANSLIT');
   return ( tm::stripWhitespace( tm::removeNumbers(x))  );
 }
 
-# re-def
+# re-def: remove punctuation marks
 rmvPunct <- function(x) {
   return (tm::stripWhitespace( tm::removePunctuation(x, preserve_intra_word_dashes = TRUE) ) );
 }
@@ -101,16 +100,36 @@ transform.matrix <- function(dtMatrix, modelType) {
       dimnames(mat)[[2]] <- colnames(dtMatrix);
       return(mat);
     },
-    # default
+    # default: do nothing
     {
       return (dtMatrix);
     }
   );
 }
 
-# remove punct
-rmv.punct <- function(x) {
-  return (gsub("[^[:alnum:]['-]|'", " ", x));
+
+# Return the default parsing parameters.
+getDefaultDtmParams <- function() {
+  
+  stopWordPath <- paste(getwd(), "/data/sw200.txt", sep=""); # stop word file list (one word /line)
+  corpusLanguage <- "french";
+  
+  # return Global tokenizing params #########################
+  dtmParams <- list(
+    dictionary = NULL, # A character vector of terms wose will be listed in the result
+    bounds = list(local = c(1, Inf), global = c(1, Inf)), # Terms that appear less often in doc than the lower bound bounds$local[1] or more often than the upper bound bounds$local[2] are discarded
+    wordLengths = c(2, Inf), # Words shorter than the minimum word length wordLengths[1] or longer than the maximum word length wordLengths[2] are discarded
+    weighting = weightBin,
+    removePunctuation = rmvPunct,
+    removeNumbers = rmvNmbrUnAccent,
+    stemming = TRUE,
+    stopwords = stemDocument(as.character(read.csv(stopWordPath, stringsAsFactors=FALSE, encoding="UTF-8")[,1]), lang=corpusLanguage),
+    tolower = TRUE,
+    minTokenSize = 2,
+    maxTokenSize = 3,
+    tokenize = "words" # can be "MC", "scan", "words" or a custom function
+  );
+  return(dtmParams);
 }
 
 # random split lrn/tst
@@ -121,84 +140,12 @@ random.split <- function (nbRows, lrnRate) {
   return(c(1, indices + 1));
 }
 
-# Save a matrix as 'jGibbsLabeledLda' file # 'labels' must be factor or you'll be sorry
-writeLlda <- function (matrix, numericLabels, outPath) {
-  cat(paste0("Generate labeledLDA input files to: '", outPath, "'"));
-  if (nrow(matrix) != length(numericLabels) ) {
-    message("Errot in fct. writeLlda : matrices do not have the same size !");
-    return(NULL);
-  }
-  if (! is.character(numericLabels )) {
-    message("Errot in fct. writeLlda : gold standard must be character vector !");
-    return(NULL);
-  }
-  # Eliminate empty docs
-  emptyIndices <- which(rowSums(matrix)==0);
-  reducedLabels <- c();
-  if (length(emptyIndices) > 0)
-    message("Only ", (nrow(matrix)-length(emptyIndices)), " written, the rest are empty docs !", sep="")
-  else
-    message("No empty docs. All will be written.");
-
-  # Map factor levels to numerics (startinf from 0 instead of 1)
-  if (length(emptyIndices > 0)) {
-    reducedMatrix <- matrix[-c(emptyIndices),];
-    reducedLabels <- numericLabels[-c(emptyIndices)];
-  }
-  else {
-    reducedMatrix <- matrix;
-    reducedLabels <- numericLabels;
-  }
-  
-  # write out
-  zz <- file(outPath, "w", encoding = "UTF-8")  # open an output file connection
-  for (i in 1:nrow(reducedMatrix)) {
-    cat ( paste0( c(paste("[", reducedLabels[i], "]\t", sep=""), colnames(matrix)[which(reducedMatrix[i,]!=0)], "\n"), collapse=" "), file=zz);
-  }
-  close(zz)
-  
-  # Create a gZip file
-  gzip (outPath, paste(outPath, ".gz", sep=""), temporary=FALSE, overwrite=TRUE, remove=FALSE);
-  # Write numeric labels for evaluation
-  write.table (reducedLabels, file=paste(outPath, ".labels", sep=""), append=FALSE, quote=FALSE, sep = "", eol = "\n", na = "NA", dec = ".", row.names=FALSE, col.names=paste(paste0("V", 1:ncol(goldStrd)), collapse=" "), fileEncoding="UTF-8");
-  rm(reducedMatrix, reducedLabels);
-}
-
-# Save a matrix as 'svmlight' file (a.w.a. labels in a separate file)
-writeSvmLight <- function (matrix, labels, outPath) {
-  # Eliminate empty docs
-  emptyIndices <- which(rowSums(matrix)==0);
-  numericLabels <- c();
-  
-  if (length(emptyIndices) > 0) {
-    message("Only ", (nrow(matrix)-length(emptyIndices)), " written, the rest are empty docs !", sep="")  
-    
-    # Map factor levels to numerics (startinf from 0)
-    numericLabels <- labels[-c(emptyIndices)];
-    
-    lengths <- rowSums(matrix[-c(emptyIndices),]);
-    write.matrix.csr(matrix[-c(emptyIndices),], file=outPath, y=lengths, fac=TRUE);
-  }
-  else {
-    message("No empty docs. All will be written.");
-    
-    # Map factor levels to numerics (startinf from 0)
-    numericLabels <- labels;
-    
-    lengths <- rowSums(matrix);
-    write.matrix.csr(matrix, file=outPath, y=lengths, fac=TRUE);
-  }
-  # Write labels
-  write.table (numericLabels, file=paste(outPath, ".labels", sep=""), append=FALSE, quote=FALSE, sep = "", eol = "\n", na = "NA", dec = ".", row.names=FALSE, col.names=FALSE, fileEncoding="UTF-8");
-  message (paste("Please check 1st line of :", outPath, ". There may be some 0 at the end.", sep=""));
-}
-
 # Load data from a folder (all JSON files)
-loadJsonFolder <- function (jsFolder, fields=NULL, docType=NULL, minContentLen=0) {
+loadJsonFolder <- function (jsFolder, fields=NULL, docType=NULL, minContentLen=0, idPath=c('NDA','valeur')) {
   csv <- data.frame(matrix(ncol=2));
   names(csv) <- c("NDA", "TEXT");
   for (fileName in list.files(jsFolder, pattern="\\.json$")) {
-    d <- loadJsonFile( paste(jsFolder, fileName, sep=""), fields, docType, minContentLen);
+    d <- loadJsonFile( paste(jsFolder, fileName, sep=""), fields, docType, minContentLen, idPath);
     # Eviter les doublons et les textes vides
     if (is.null(d) || d[1] %in% csv$NDA)
       next;
@@ -244,7 +191,7 @@ loadJsonFile <- function (path, fields=NULL, docType=NULL, minContentLen=0, idPa
       return (NULL)
 }
 
-# Build gold-standard matrix
+# Build gold-standard matrix: lines=texts, colums=codes, cell(text,code)=TRUE if text has this code
 buildGoldStrd <- function (df.text, df.code, allowedCodes) {
   goldStrd <- as.data.frame(matrix(FALSE, ncol=length(allowedCodes), nrow=length(df.text[,1])) );
   names(goldStrd) <- allowedCodes;
@@ -255,11 +202,3 @@ buildGoldStrd <- function (df.text, df.code, allowedCodes) {
   }
   return (goldStrd);
 }
-
-# Create a copy of all files of the corpus restricted on present NDA
-copy.corpus <- function (ndas, srcFolder, destFolder) {
-  for (nda in ndas) {
-    file.copy(paste(srcFolder, nda, ".json", sep=""), paste(destFolder, nda, ".json", sep=""), overwrite=TRUE);
-  }
-}
-
