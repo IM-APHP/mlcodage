@@ -1,7 +1,9 @@
 OpenCPU-based coding app: mlcodage
 ====================
   
-The purpose of this OpenCPU app is to help automating the task of code assignment to discharge summaries using machine learning.  
+The purpose of this OpenCPU app is to help automating the task of code assignment to discharge summaries using machine learning. 
+
+Functions for learning and prediction are available. Four models built on French surgery report to predict procudure codes are given for the example.
 
 Use locally
 -----------
