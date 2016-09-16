@@ -1,4 +1,6 @@
 .Rproj.user
 .Rhistory
+.Rbuildignore
 .RData
 aphp.R
+mlcodage.Rproj
